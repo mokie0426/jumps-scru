@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Innocent Article & Jump Scare Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+        }
+
+        /* Fullscreen Overlay Styles */
+        #scare-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #000;
+            z-index: 99999;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Intense Strobe & Zoom Animation */
+        @keyframes strobe {
+            0% { opacity: 1; transform: scale(1.05) rotate(0deg); filter: contrast(120%); }
+            20% { opacity: 0.85; transform: scale(1.15) rotate(1deg); filter: contrast(200%) invert(0.1); }
+            40% { opacity: 1; transform: scale(1.08) rotate(-1deg); filter: contrast(150%); }
+            60% { opacity: 0.9; transform: scale(1.2) rotate(2deg); filter: contrast(250%) saturate(150%); }
+            80% { opacity: 1; transform: scale(1.12) rotate(-2deg); filter: contrast(180%); }
+            100% { opacity: 1; transform: scale(1.05) rotate(0deg); filter: contrast(120%); }
+        }
+
+        .scare-active {
+            animation: strobe 0.06s infinite alternate;
+        }
+
+        /* Violent Screen Shake */
+        @keyframes shake {
+            0% { transform: translate(3px, 3px) rotate(0deg); }
+            10% { transform: translate(-5px, -6px) rotate(-2deg); }
+            20% { transform: translate(-7px, 0px) rotate(2deg); }
+            30% { transform: translate(7px, 6px) rotate(0deg); }
+            40% { transform: translate(3px, -3px) rotate(2deg); }
+            50% { transform: translate(-4px, 6px) rotate(-2deg); }
+            60% { transform: translate(-7px, 2px) rotate(0deg); }
+            70% { transform: translate(7px, 2px) rotate(-2deg); }
+            80% { transform: translate(-3px, -5px) rotate(2deg); }
+            90% { transform: translate(4px, 6px) rotate(0deg); }
+            100% { transform: translate(2px, -4px) rotate(-1deg); }
+        }
+
+        .shake-active {
+            animation: shake 0.1s infinite;
+        }
+
+        /* Invisible Fullscreen Trap Layer */
+        #trap-trigger {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+        }
+    </style>
+</head>
+<body class="bg-black text-slate-100 antialiased min-h-screen">
+
+    <!-- Invisible trigger layer covering screen for instant sound activation on tap -->
+    <div id="trap-trigger" onclick="activateAudio()" ontouchstart="activateAudio()">
+    </div>
+
+    <!-- Fullscreen Jump Scare Overlay (Shown Immediately on Page Load) -->
+    <div id="scare-overlay" class="flex" onclick="activateAudio()">
+        <img id="scare-img" src="https://i.supaimg.com/84c664c6-4968-4b03-99a9-bc20b6e8761d/07f1075e-230a-4a0c-a15b-1bff1bee1018.jpg" alt="Jump Scare" class="w-full h-full object-cover select-none pointer-events-none scare-active">
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        let audioCtx = null;
+        let soundPlayed = false;
+        const SCARE_IMG_URL = "https://i.supaimg.com/84c664c6-4968-4b03-99a9-bc20b6e8761d/07f1075e-230a-4a0c-a15b-1bff1bee1018.jpg";
+
+        function initAudioContext() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playScareSound() {
+            if (soundPlayed) return;
+            soundPlayed = true;
+
+            initAudioContext();
+            const duration = 3.5;
+            const now = audioCtx.currentTime;
+
+            // Screech Oscillators
+            const osc1 = audioCtx.createOscillator();
+            const osc2 = audioCtx.createOscillator();
+            osc1.type = 'sawtooth';
+            osc2.type = 'square';
+
+            osc1.frequency.setValueAtTime(1000, now);
+            osc1.frequency.exponentialRampToValueAtTime(4500, now + 0.15);
+            osc1.frequency.exponentialRampToValueAtTime(800, now + duration);
+
+            osc2.frequency.setValueAtTime(1400, now);
+            osc2.frequency.exponentialRampToValueAtTime(5000, now + 0.2);
+            osc2.frequency.exponentialRampToValueAtTime(600, now + duration);
+
+            // Chaotic White Noise
+            const bufferSize = audioCtx.sampleRate * duration;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+            const noiseNode = audioCtx.createBufferSource();
+            noiseNode.buffer = buffer;
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'highpass';
+            filter.frequency.setValueAtTime(800, now);
+
+            // Sub-Bass Drop
+            const subOsc = audioCtx.createOscillator();
+            subOsc.type = 'sine';
+            subOsc.frequency.setValueAtTime(180, now);
+            subOsc.frequency.exponentialRampToValueAtTime(25, now + 0.5);
+
+            const gainNode = audioCtx.createGain();
+            gainNode.gain.setValueAtTime(1.0, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration);
+
+            noiseNode.connect(filter);
+            filter.connect(gainNode);
+            osc1.connect(gainNode);
+            osc2.connect(gainNode);
+            subOsc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            noiseNode.start(now);
+            osc1.start(now);
+            osc2.start(now);
+            subOsc.start(now);
+
+            noiseNode.stop(now + duration);
+            osc1.stop(now + duration);
+            osc2.stop(now + duration);
+            subOsc.stop(now + duration);
+        }
+
+        function triggerInstantVisual() {
+            const overlay = document.getElementById('scare-overlay');
+            const img = document.getElementById('scare-img');
+
+            overlay.style.display = 'flex';
+            img.classList.add('scare-active');
+            document.body.classList.add('shake-active');
+
+            // Try playing audio immediately if browser policy allows
+            try {
+                playScareSound();
+            } catch (e) {
+                console.log("Audio autoplay restricted until touch");
+            }
+        }
+
+        function activateAudio() {
+            playScareSound();
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            }
+        }
+
+        // Trigger visual jump scare IMMEDIATELY on page load
+        window.onload = function() {
+            document.getElementById('scare-img').src = SCARE_IMG_URL;
+            triggerInstantVisual();
+
+            // Any interaction instantly triggers the terrifying screech sound
+            ['click', 'touchstart', 'pointerdown', 'keydown', 'scroll'].forEach(evt => {
+                document.addEventListener(evt, activateAudio, { once: true });
+            });
+        };
+    </script>
+</body>
+</html>
